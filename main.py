@@ -12,6 +12,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 
@@ -24,9 +25,11 @@ data = pd.concat([data.gender,data.description],axis=1)             #get from da
 #let's drop NaN values
 data.dropna(axis=0,inplace=True)
 
-data.gender = [1 if each == "female" else 0 for each in data.gender] #change female to 1 and male to 0
-
-nltk.download('punkt')
+pass
+#to do clean the data MF
+data = data[data.gender.isin(['female','male'])]
+# data.gender = [1 if each == "female" else 0 for each in data.gender] #change female to 1 and male to 0
+data['gender'] = (data.gender == 'female').astype(int)
 
 description_list = []
 for description in data.description:                                #remove from all description stop words and set lowercase
@@ -47,39 +50,75 @@ for description in data.description:                                #remove from
 
 #we can define max_features
 max_features = 1000
+#create the instance of vector
 count_vectorizer = CountVectorizer(max_features=max_features,stop_words = "english")
-#count_vectorizer = CountVectorizer(stop_words = "english")
+tfid_vectorizer = TfidfVectorizer(max_features=max_features)
 
-sparce_matrix = count_vectorizer.fit_transform(description_list).toarray() # x
 
-print("{} most common words: {}".format(max_features,count_vectorizer.get_feature_names()))
+sparse_matrix = count_vectorizer.fit_transform(description_list).toarray() # x
+sparse_matrix_ftid = tfid_vectorizer.fit_transform(description_list).toarray()
+
+print("{} most common words for CountVectorizer: {}".format(max_features,count_vectorizer.get_feature_names()))
+print("{} most common words for TfidfVectorizer: {}".format(max_features,tfid_vectorizer.get_feature_names()))
 
 #Train and Test Split
 y = data.iloc[:,0].values   # male or female classes (gender)
-x = sparce_matrix           # full tweet
-# train test split
-x_train, x_test, y_train, y_test = train_test_split(x,y, test_size = 0.1, random_state = 42)
+x = sparse_matrix           # full tweet
 
+x_ftid = sparse_matrix_ftid
+
+# word_count = np.array([[len(desc.split(" ")) for desc in description_list]]).transpose()
+word_count = np.array([[len(desc) for desc in description_list]]).transpose() # add count to world of post
+x = np.concatenate([x, word_count], axis=1)
+x_ftid = np.concatenate([x_ftid, word_count], axis=1)
+
+
+
+# train test split
+x_train, x_test, y_train, y_test = train_test_split(x,y, test_size = 0.15, random_state = 42)
+x_train_ftid, x_test_ftid, y_train_ftid, y_test_ftid = train_test_split(x_ftid,y, test_size = 0.15, random_state = 42)
+
+
+#GaussianNB model
 nb = GaussianNB()
+nb_ftid = GaussianNB()
 
 nb.fit(x_train,y_train)             #train to model by full tweet and gender
+nb_ftid.fit(x_train_ftid,y_train_ftid)             #train to model by full tweet and gender
 
-print("accuracy: ",nb.score(x_test,y_test))
+print("using GaussianNB model : ")
+print("accuracy with CountVectorizer for train : ",nb.score(x_train,y_train))
+print("accuracy with CountVectorizer for test  : ",nb.score(x_test,y_test))
+
+print("accuracy with TfidfVectorizer vector for train : ",nb_ftid.score(x_train_ftid,y_train_ftid))
+print("accuracy with TfidfVectorizer vector for test  : ",nb_ftid.score(x_test_ftid,y_test_ftid))
 
 
-y_pred = nb.predict(x_test)
+#RandomForestClassifier model
+rf = RandomForestClassifier(n_estimators = 100)
+rf_tfid = RandomForestClassifier(n_estimators = 100)
+
+rf.fit(x_train,y_train)
+rf_tfid.fit(x_train_ftid,y_train_ftid)
+
+print("using RandomForestClassifier  : ")
+print("accuracy with CountVectorizer for train : ",rf.score(x_test,y_test))
+print("accuracy with CountVectorizer for test  : ",rf.score(x_test,y_test))
+
+print("accuracy with TfidfVectorizer vector for train : ",rf_tfid.score(x_train_ftid,y_train_ftid))
+print("accuracy with TfidfVectorizer vector for test  : ",rf_tfid.score(x_test_ftid,y_test_ftid))
+
+
+y_pred = nb_ftid.predict(x_test)
 y_true = y_test
 
 cm_nb = confusion_matrix(y_true,y_pred)
 
 sns.heatmap(cm_nb,annot=True,cmap="RdPu",fmt=".0f",cbar=False)
 #plt.show()
+#plt.clf()
 
-rf = RandomForestClassifier(n_estimators = 100)
 
-rf.fit(x_train,y_train)
-
-print("accuracy atfer RandomForestClassifier: ",rf.score(x_test,y_test))
 
 #                           Second time                                    #
 y_pred_2 = rf.predict(x_test)
