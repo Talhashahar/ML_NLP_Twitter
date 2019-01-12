@@ -144,9 +144,9 @@ sparse_matrix_description_list.append("Count vector with english stop words : ")
 sparse_matrix_list.append(count_vector_feature_added)
 sparse_matrix_description_list.append("Count vector without english stop words : ")
 sparse_matrix_list.append(ftid_vector_stop_words_feature_added)
-sparse_matrix_description_list.append("FTID vector with english stop words : ")
+sparse_matrix_description_list.append("FT-IDF vector with english stop words : ")
 sparse_matrix_list.append(ftid_vector_feature_added)
-sparse_matrix_description_list.append("FTID vector without english stop words : ")
+sparse_matrix_description_list.append("FT-IDF vector without english stop words : ")
 
 print('\n')
 print('\n')
@@ -160,7 +160,9 @@ for matrix in sparse_matrix_list:
     model_randomforestclassifier = train_randomforestclassifier_model(x_train, x_test, y_train, y_test, 100)
     print ('\n')
     index = index + 1
-    #show_the_result_with_plt(model_gaussiannb, x_test, y_test)
-    #plt.clf()
-    #show_the_result_with_plt(model_randomforestclassifier, x_test, y_test)
-    #plt.clf()
+    show_the_result_with_plt(model_gaussiannb, x_test, y_test)
+    plt.clf()
+    show_the_result_with_plt(model_randomforestclassifier, x_test, y_test)
+    plt.clf()
+
+pass
